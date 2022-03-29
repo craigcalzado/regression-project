@@ -48,11 +48,17 @@ def pearson_corr(df, target):
     Calculate the pearson correlation between the target and feature
     """
     # create a loop that calculates the pearson correlation for each feature
+    corr_df = pd.DataFrame()
     for i in feature.columns:
         # calculate the pearson correlation
         corr = pearsonr(df[target], df[i])
-        # print the feature and the correlation
-        print(i, corr) 
+        # add the feature and the correlation to corr_df
+        corr_df = corr_df.append({'feature': i, 'r': corr[0], 'p': corr[1]}, ignore_index=True)
+        # pass an index to the dataframe
+        corr_df.index = range(0, len(corr_df))
+    return corr_df
+
+        
 # create a function for calculating the correlation of a feature
 def ttest_corr(df, target):
     feature = df[['sqft', 'bathrooms', 'bedrooms', 'lotsqft']]
@@ -60,11 +66,15 @@ def ttest_corr(df, target):
     Calculate the ttest correlation between the target and feature
     """
     # create a loop that calculates the ttest correlation for each feature
+    corr_df = pd.DataFrame()
     for i in feature.columns:
         # calculate the ttest correlation
         corr = ttest_ind(df[target], df[i])
-        # print the feature and the correlation
-        print(i, corr)
+        # add the feature and the correlation to corr_df
+        corr_df = corr_df.append({'feature': i, 'r': corr[0], 'p': corr[1]}, ignore_index=True)
+        # pass an index to the dataframe
+        corr_df.index = range(0, len(corr_df))
+    return corr_df
 
 # Create a function that creates your X and y dataframes
 def create_X_y(train, validate, test):
