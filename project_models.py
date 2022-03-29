@@ -260,7 +260,26 @@ def lars_test(X_test, y_test):
     plot = sns.scatterplot(x=y_test['value'], y=y_test['price_pred_lars'])
     return p, plot
 
-
+def glm_tweedie_test(X_test, y_test):
+    # Create the object
+    glm = TweedieRegressor(power=1, alpha=0)
+    # Fit the model to train. 
+    # We must specify the column in y_train, 
+    # becuase we  converted it to a dataframe from a series! 
+    glm.fit(X_test, y_test.value)
+    # predict train
+    y_test['price_pred_glm'] = glm.predict(X_test)
+    # evaluate: rmse
+    rmse_test = mean_squared_error(y_test.value, y_test.price_pred_glm) ** (1/2)
+    r2_test = explained_variance_score(y_test.value, y_test.price_pred_glm)
+    p = print("RMSE for GLM using Tweedie, power=1 & alpha=0\nTest/In-Sample: ", round(rmse_test,2),
+      "\n",
+      "\n",
+      "R^2 using Mean\nTrain/In-Sample: ", round(r2_test, 2),
+      "\nTest/Out-of-Sample: ", round(r2_test, 2))
+    # plot
+    plot = sns.scatterplot(x=y_test['value'], y=y_test['price_pred_glm'], alpha=0.5)
+    
 
 
 
