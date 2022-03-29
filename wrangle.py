@@ -111,7 +111,7 @@ def get_zillow_project_data(use_cache=True):
     data = 'zillow'
     url = f'mysql+pymysql://{user}:{password}@{host}/{data}'
     query = '''
-            SELECT parcelid, bathroomcnt, bedroomcnt, finishedsquarefeet12, fips, garagecarcnt, latitude, longitude, lotsizesquarefeetw, yearbuilt, taxvaluedollarcnt, assessmentyear, logerror, transactiondate
+            SELECT parcelid, bathroomcnt, bedroomcnt, finishedsquarefeet12, fips, lotsizesquarefeet, yearbuilt, taxvaluedollarcnt, logerror, transactiondate
             FROM properties_2017 
             LEFT JOIN propertylandusetype USING (propertylandusetypeid)
             JOIN predictions_2017 USING (parcelid)
@@ -124,12 +124,10 @@ def get_zillow_project_data(use_cache=True):
 def zillow_proj_prep(df):
     # drop columns we don't need parcelid
     df = df.drop(columns=['parcelid'])
-    # drop all null values in lotsizesquarefeet
-    df.dropna(subset=['lotsizesquarefeet'], inplace=True)
-    # drop all null values in calculatedbathnbr and finishedsquarefeet12 
+    # drop all null values
     df.dropna(subset=['finishedsquarefeet12', 'taxvaluedollarcnt','lotsizesquarefeet'], inplace=True)
-    # create a dummy column for garagecarcnt if has a value = 1 else 0
-    df['garagecarcnt'] = df['garagecarcnt'].apply(lambda x: 1 if x > 0 else 0)
     # impute missing values for yearbuilt with mode
     df['yearbuilt'] = df['yearbuilt'].fillna(df['yearbuilt'].mode()[0])
+    # rename columns 
+    df.rename(columns={'bathroomcnt': 'bathrooms', 'bedroomcnt': 'bedrooms', 'finishedsquarefeet12': 'sqft', 'fips': 'county_fips', 'lotsizesquarefeet': 'lotsqft', 'taxvaluedollarcnt': 'value', 'yearbuilt': 'year'}, inplace=True)
     return df
