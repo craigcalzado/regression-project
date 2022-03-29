@@ -111,7 +111,7 @@ def get_zillow_project_data(use_cache=True):
     data = 'zillow'
     url = f'mysql+pymysql://{user}:{password}@{host}/{data}'
     query = '''
-            SELECT parcelid, bathroomcnt, bedroomcnt, finishedsquarefeet12, fips, lotsizesquarefeet, yearbuilt, taxvaluedollarcnt, logerror, transactiondate
+            SELECT parcelid, bathroomcnt, bedroomcnt, finishedsquarefeet12, fips, lotsizesquarefeet, yearbuilt, taxvaluedollarcnt, logerror, transactiondate, taxamount
             FROM properties_2017 
             LEFT JOIN propertylandusetype USING (propertylandusetypeid)
             JOIN predictions_2017 USING (parcelid)
@@ -128,6 +128,8 @@ def zillow_proj_prep(df):
     df.dropna(subset=['finishedsquarefeet12', 'taxvaluedollarcnt','lotsizesquarefeet'], inplace=True)
     # impute missing values for yearbuilt with mode
     df['yearbuilt'] = df['yearbuilt'].fillna(df['yearbuilt'].mode()[0])
+    # drop colums we don't need
+    df = df.drop(columns=['taxamount'])
     # rename columns 
     df.rename(columns={'bathroomcnt': 'bathrooms', 'bedroomcnt': 'bedrooms', 'finishedsquarefeet12': 'sqft', 'fips': 'county_fips', 'lotsizesquarefeet': 'lotsqft', 'taxvaluedollarcnt': 'value', 'yearbuilt': 'year'}, inplace=True)
     return df
