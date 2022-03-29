@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression, TweedieRegressor, LassoLars
 import f_engineer
-from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.feature_selection import SelectKBest, f_regression, RFE
 from sklearn.metrics import  mean_squared_error, explained_variance_score
 # remove warnings
 import warnings
@@ -43,7 +43,7 @@ def sample_corr(df, feature):
     plt.show()
 # create a function for calculating the correlation of a feature
 def pearson_corr(df, target):
-    feature = train[['sqft', 'bathrooms', 'bedrooms', 'lotsqft']]
+    feature = df[['sqft', 'bathrooms', 'bedrooms', 'lotsqft']]
     """
     Calculate the pearson correlation between the target and feature
     """
@@ -55,7 +55,7 @@ def pearson_corr(df, target):
         print(i, corr) 
 # create a function for calculating the correlation of a feature
 def ttest_corr(df, target):
-    feature = train[['sqft', 'bathrooms', 'bedrooms', 'lotsqft']]
+    feature = df[['sqft', 'bathrooms', 'bedrooms', 'lotsqft']]
     """
     Calculate the ttest correlation between the target and feature
     """
@@ -65,6 +65,7 @@ def ttest_corr(df, target):
         corr = ttest_ind(df[target], df[i])
         # print the feature and the correlation
         print(i, corr)
+
 # Create a function that creates your X and y dataframes
 def create_X_y(train, validate, test):
     # Create subsets with only predictive features (x)
@@ -74,25 +75,54 @@ def create_X_y(train, validate, test):
     y_validate = validate.value
     X_test = test.drop(columns=['value', 'transactiondate', 'logerror', 'county_fips'])
     y_test = test.value
-    return X_train.shape, y_train.shape, X_validate.shape, y_validate.shape, X_test.shape, y_test.shape
+    return X_train, y_train, X_validate, y_validate, X_test, y_test
+
 # create a function that scales your X train, validate, and test dataframes
-def scale_X(train, validate, test):
+def scale_X(X_train, X_validate, X_test):
     X_train_scaled = f_engineer.scale_minmax(X_train)
     X_validate_scaled = f_engineer.scale_minmax(X_validate)
     X_test_scaled = f_engineer.scale_minmax(X_test)
     return X_train_scaled, X_validate_scaled, X_test_scaled
+
 # create kbest function for X_train and y_train
 def kbest_X_y(X, y):
-    #create a copy of y_train
-    y_train = y.value.copy()
     kbest = SelectKBest(f_regression, k=3)
     kbest.fit(X, y)
     kbest_results = pd.DataFrame(dict(p=kbest.pvalues_, f=kbest.scores_), index=X.columns)
     index = X.columns[kbest.get_support()]
     return print(kbest_results, print(index))
+
+def rfe(X, y):
+    model = LinearRegression()
+    rfe = RFE(model, n_features_to_select=3)
+    rfe.fit(X, y)
+    feature_mask = rfe.support_
+    rfe_feature = X.iloc[:,feature_mask].columns.tolist()
+    var_ranks = rfe.ranking_
+    # get the variable names
+    var_names = X.columns.tolist()
+    # combine ranks and names into a df for clean viewing
+    rfe_ranks_df = pd.DataFrame({'Var': var_names, 'Rank': var_ranks})
+    return rfe_feature, rfe_ranks_df.sort_values('Rank')
+
+# create a function that convers y into df
+def y_dataframe(y_train, y_validate, y_test):
+    y_train = pd.DataFrame(y_train)
+    y_validate = pd.DataFrame(y_validate)
+    y_test = pd.DataFrame(y_test)
+    return y_train, y_validate, y_test
+
+# create median baseline function
+def median_baseline(y_train, y_validate, y_test):
+    price_pred_median = y_train['value'].median()
+    y_train['price_pred_median'] = price_pred_median
+    y_validate['price_pred_median'] = price_pred_median
+    y_test['price_pred_median'] = price_pred_median
+    return y_train, y_validate, y_test
+
 def rmse_r2(y_train, y_validate, y_test):
     # create a median baseline
-    rmse_train = mean_squared_error(y_train.value, y_train.price_pred_median) ** .5
+    rmse_train = mean_squared_error(y_train['value'], y_train['price_pred_median']) ** .5
     rmse_validate = mean_squared_error(y_validate.value, y_validate.price_pred_median) ** .5
     rmse_test = mean_squared_error(y_test.value, y_test.price_pred_median) ** .5
     # RMSE of price_pred_median (median baseline)
@@ -105,14 +135,14 @@ def rmse_r2(y_train, y_validate, y_test):
     "R^2 using Mean\nTrain/In-Sample: ", round(r2_train, 2),
     "\nValidate/Out-of-Sample: ", round(r2_validate, 2)
     )
-    plot = sns.scatterplot(x=y_train['value'], y=y_train['price_pred_median'])
+    plot = sns.scatterplot(x=y_train.value, y=y_train['price_pred_median'])
     return p, plot
 # create a function of the Linear regression, OLS
-def lm_ols(y_train, y_validate, y_test):
+def lm_ols(X_train, y_train, X_validate, y_validate):
     # Create the object
     lm = LinearRegression(normalize=True)
     # Fit the object
-    lm.fit(X_train_scaled, y_train.value)
+    lm.fit(X_train, y_train.value)
     # Use the object
     y_train['price_pred_lm'] = lm.predict(X_train)
     rmse_train = mean_squared_error(y_train.value, y_train.price_pred_lm) ** (1/2)
@@ -128,33 +158,25 @@ def lm_ols(y_train, y_validate, y_test):
       "\nValidate/Out-of-Sample: ", round(r2_validate, 2))
     plot = sns.scatterplot(x=y_train['value'], y=y_train['price_pred_lm'])
     return p, plot
-lm_ols(y_train, y_validate, y_test)
 # create a function of the Lasso + Lars
-def lars_lasso(y_train, y_validate, y_test):
+def lars_lasso(X_train, y_train, X_validate, y_validate, X_test, y_test):
     # Create the object
     lars = LassoLars(alpha=1)
-
     # Fit the model to train. 
     # We must specify the column in y_train, 
     # because we have converted it to a dataframe from a series!
     lars.fit(X_train, y_train.value)
-
     # predict train
     y_train['price_pred_lars'] = lars.predict(X_train)
-
     # evaluate using rmse
     rmse_train = mean_squared_error(y_train.value, y_train.price_pred_lars) ** (1/2)
-
     # predict validate
     y_validate['price_pred_lars'] = lars.predict(X_validate)
     y_test['price_pred_lars'] = lars.predict(X_test)
-
     # evaluate using rmse
     rmse_validate = mean_squared_error(y_validate.value, y_validate.price_pred_lars) ** (1/2)
-
     r2_train = explained_variance_score(y_train.value, y_train.price_pred_lars)
     r2_validate = explained_variance_score(y_validate.value, y_validate.price_pred_lars)
-
     p= print("RMSE for Lasso + Lars\nTraining/In-Sample: ", round(rmse_train,2), 
       "\nValidation/Out-of-Sample: ", round(rmse_validate,2),
       "\n",
@@ -163,12 +185,10 @@ def lars_lasso(y_train, y_validate, y_test):
       "\nValidate/Out-of-Sample: ", round(r2_validate, 2))
     plot = sns.scatterplot(x=y_train['value'], y=y_train['price_pred_lars'], alpha=0.5)
     return p, plot
-lars_lasso(y_train, y_validate, y_test)
 # create a function of the GLM
-def glm_tweedie(y_train, y_validate, y_test):
+def glm_tweedie(X_train, y_train, X_validate, y_validate, X_test, y_test):
     # Create the object
     glm = TweedieRegressor(power=1, alpha=0)
-
     # Fit the model to train. 
     # We must specify the column in y_train, 
     # becuase we  converted it to a dataframe from a series! 
@@ -185,7 +205,6 @@ def glm_tweedie(y_train, y_validate, y_test):
     # evaluate: r2
     r2_train = explained_variance_score(y_train.value, y_train.price_pred_glm)
     r2_validate = explained_variance_score(y_validate.value, y_validate.price_pred_glm)
-    
     p = print("RMSE for GLM using Tweedie, power=1 & alpha=0\nTraining/In-Sample: ", round(rmse_train,2), 
       "\nValidation/Out-of-Sample: ", round(rmse_validate,2),
       "\n",
@@ -195,7 +214,6 @@ def glm_tweedie(y_train, y_validate, y_test):
     # plot
     plot = sns.scatterplot(x=y_train['value'], y=y_train['price_pred_glm'], alpha=0.5)
     plot2 = sns.scatterplot(x=y_test['value'], y=y_test['price_pred_lars'])
-
     # create subplots for the two plots
     fig, axs = plt.subplots(1, 2, figsize=(15, 5))
     axs[0].set_title('GLM Tweedie, power=1 & alpha=0')
@@ -211,9 +229,12 @@ def glm_tweedie(y_train, y_validate, y_test):
     axs[1].set_xlim(0, max(y_test.value) + 100)
     axs[1].scatter(y_test.value, y_test.price_pred_lars, alpha=0.5)
     return p, plot, plot2
-glm_tweedie(y_train, y_validate, y_test)
 # create a function that predicts test data
 def lars_test(X_test, y_test):
+    # Create the object
+    lars = LassoLars(alpha=1)
+    # Fit the model to train.
+    lars.fit(X_test, y_test.value)
     y_test['price_pred_lars'] = lars.predict(X_test)
 
     # evaluate using rmse
@@ -228,7 +249,7 @@ def lars_test(X_test, y_test):
       "Test/Out-of-Sample: ", round(r2_test, 2))
     plot = sns.scatterplot(x=y_test['value'], y=y_test['price_pred_lars'])
     return p, plot
-lars_test(X_test, y_test)
+
 
 
 
