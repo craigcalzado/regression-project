@@ -22,6 +22,7 @@ def prep_zillow17(df):
 
 # function to remove outliers
 def remove_outliers(df, k, col):
+    k = 1.5
     q1 = df[col].quantile(0.25)
     q3 = df[col].quantile(0.75)
     iqr = q3 - q1  # Interquartile range
@@ -31,9 +32,9 @@ def remove_outliers(df, k, col):
     return df
 
 # outlier removal specific to the data
-def remove_outliers_fibs(df, k):
+def remove_outliers_fips(df, k):
     for col in df.columns:
-        if col not in ['fips', 'yearbuilt', 'propertycountylandusecode', 'transactiondate']:
+        if col not in ['county_fips', 'year', 'logerror', 'transactiondate']:
             df = remove_outliers(df, k, col)
     return df
 
