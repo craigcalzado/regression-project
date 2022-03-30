@@ -95,3 +95,12 @@ Discovery:
 - LassaLars model was the best out performing model. The baseline was set at $328,336.00 off of actual value. LassaLars model was able to predict the value of the property with $208,614.82 off of the actual value. Thats approximately 120k improvement in property value prediction.
 - LassaLars was best model as determined by RMSE and R^2.
 - County had an effect on tax value, but was not one of the most important drivers.
+
+<h2>Reproduction</h2>
+github: https://github.com/craigcalzado/regression-project
+Import modules:
+    - wrangle.py (data wrangling)
+    - prepare.py (data preparation)
+    - project_models.py (All functions for modeling)
+Run zillow_project.ipynb
+
