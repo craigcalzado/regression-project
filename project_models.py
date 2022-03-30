@@ -130,7 +130,7 @@ def median_baseline(y_train, y_validate, y_test):
     y_test['price_pred_median'] = price_pred_median
     return y_train, y_validate, y_test
 
-def rmse_r2(y_train, y_validate, y_test):
+def rmse_r2(y_train, y_validate):
     # create a median baseline
     rmse_train = mean_squared_error(y_train['value'], y_train['price_pred_median']) ** .5
     rmse_validate = mean_squared_error(y_validate.value, y_validate.price_pred_median) ** .5
