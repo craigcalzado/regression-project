@@ -104,3 +104,16 @@ Import modules:
     - project_models.py (All functions for modeling)
 Run zillow_project.ipynb
 
+
+<h2>Project Summary</h2>
+
+I wanted to create a regression model that predict propery tax assessed values of Single Family Properties using attributes of the properties. I needed to find the key drivers of property value. I needed to deliver a report that the data science team can read through and replicate, understand what steps were taken, why and what the outcome was. I needed to make recommendations on what works or doesn't work in prediction these homes' values.
+The tools I used to create this model were: 
+- Pandas
+- Numpy
+- Sklearn
+- Scikit-learn
+- Matplotlib
+- Seaborn
+- Jupyter Notebook
+I was able to create a Tweedie regression model (GLM) that predict propery tax assessed values of Single Family Properties using bedrooms, bathrooms, and squarefootage. I set the baseline at the median value of the property tax assessed value of Single Family Properties which was $328,336.00. I used the Tweedie regression model to predict the value of the property with $208,614.82 off of the actual value. Thats approximately 35% improvement in property value prediction.
